@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<thing:thing-descriptions bindingId="motion"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:thing="https://openhab.org/schemas/thing-description/v1.0.0"
+	xsi:schemaLocation="https://openhab.org/schemas/thing-description/v1.0.0 https://openhab.org/schemas/thing-description-1.0.0.xsd">
+
+	<bridge-type id="motionbridge">
+		<label>Motion bridge</label>
+		<description>Hub that controlls your motion devices</description>
+
+		<config-description>
+			<parameter-group name="connection">
+				<label>Connection</label>
+				<description>Parameters for connecting to the MotionBridge</description>
+			</parameter-group>
+			<parameter name="hostname" type="text" required="true" groupName="connection">
+				<context>network-address</context>
+				<label>Hostname</label>
+				<description>Hostname or IP address of the device</description>
+			</parameter>
+			<parameter name="secret" type="text" required="true" groupName="connection">
+				<label>Motion key</label>
+				<description>
+					API key that can be obtained through the Motion app by quickly tapping
+					the about page 5 times.
+				</description>
+			</parameter>
+		</config-description>
+	</bridge-type>
+
+	<thing-type id="motionblind">
+		<supported-bridge-type-refs>
+			<bridge-type-ref id="motionbridge"/>
+		</supported-bridge-type-refs>
+
+		<label>Motion Blind</label>
+		<description>A motorized blind controlled through the Motion bridge</description>
+		<category>Blinds</category>
+
+		<channels>
+			<channel id="control" typeId="control"/>
+		</channels>
+
+		<config-description>
+			<parameter name="macAddress" type="text" required="true">
+				<label>MAC Address</label>
+				<description>MAC address of the device</description>
+			</parameter>
+		</config-description>
+	</thing-type>
+
+	<channel-type id="control">
+		<item-type>Rollershutter</item-type>
+		<label>Controls the blind</label>
+		<description>
+			Allows to control the blind by sending UP, DOWN, STOP commands.
+		</description>
+	</channel-type>
+</thing:thing-descriptions>
