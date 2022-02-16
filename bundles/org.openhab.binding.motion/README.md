@@ -4,8 +4,8 @@ Binding to integrate Motion devices.
 
 ## Supported Things
 
-- `motionbridge`: Motion bridge
-- `motionblind`: Regular blind
+- `bridge`: Motion bridge
+- `blind`: Regular blind
 
 ## Discovery
 
@@ -32,8 +32,8 @@ After configuring the bridge, connected devices can be discovered automatically.
 Things:
 
 ```java
-Bridge motion:motionbridge:abc [ hostname="192.168.1.42", secret="secret-key-12" ] {
-    Thing motion:motionblind:abc:d267b25edad5aaa1 [ macAddress="d267b25edad5aaa1" ]
+Bridge motion:bridge:abc [ hostname="192.168.1.42", secret="secret-key-12" ] {
+    Thing blind d267b25edad5aaa1 [ macAddress="d267b25edad5aaa1" ]
 }
 ```
 
