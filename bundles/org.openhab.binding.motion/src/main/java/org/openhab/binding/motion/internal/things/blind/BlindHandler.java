@@ -20,6 +20,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
@@ -57,15 +58,7 @@ public class BlindHandler extends BaseThingHandler {
     private final Logger logger = LoggerFactory.getLogger(BlindHandler.class);
 
     @Nullable
-    private Client client;
-    @Nullable
     private Device blind;
-
-    @Nullable
-    private BridgeConfiguration bridgeConfiguration;
-
-    @Nullable
-    private BridgeHandler bridgeHandler;
 
     public BlindHandler(Thing thing) {
         super(thing);
@@ -74,44 +67,38 @@ public class BlindHandler extends BaseThingHandler {
     @Override
     public void initialize() {
         String macAddress = getConfig().as(BlindConfiguration.class).macAddress;
-        Bridge bridge = getBridge();
 
-        if (bridge == null) {
-            return;
-        }
-
-        BridgeHandler handler = (BridgeHandler) bridge.getHandler();
-        this.bridgeHandler = handler;
-
-        if (handler == null) {
-            return;
-        }
-
-        bridgeConfiguration = handler.config;
-
-        client = handler.getClient();
-
-        if (client == null) {
-            return;
-        }
-
-        scheduler.execute(() -> {
-            try {
-                Optional<Device> device = client.getDevice(macAddress);
-
-                if (device.isEmpty()) {
-                    updateStatus(ThingStatus.OFFLINE);
-                    return;
-                }
-
-                blind = device.get();
-
-                updateStatus(ThingStatus.ONLINE);
-                synchronizeState();
-            } catch (IOException e) {
-                logger.error("Failed to communicate with blind: {}", e.getMessage());
-                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR);
+        withBridgeHandler(handler -> {
+            if (handler.getThing().getStatus() == ThingStatus.OFFLINE) {
+                logger.error("Cannot initialize blind: Bridge is offline.");
+                updateStatus(ThingStatus.UNKNOWN, ThingStatusDetail.BRIDGE_OFFLINE);
+                return;
             }
+
+            Client client = handler.getClient();
+
+            if (client == null) {
+                return;
+            }
+
+            scheduler.execute(() -> {
+                try {
+                    Optional<Device> device = client.getDevice(macAddress);
+
+                    if (device.isEmpty()) {
+                        updateStatus(ThingStatus.OFFLINE);
+                        return;
+                    }
+
+                    blind = device.get();
+
+                    updateStatus(ThingStatus.ONLINE);
+                    synchronizeState();
+                } catch (IOException e) {
+                    logger.error("Failed to communicate with blind: {}", e.getMessage());
+                    updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR);
+                }
+            });
         });
     }
 
@@ -122,120 +109,151 @@ public class BlindHandler extends BaseThingHandler {
         logger.debug("Blind got command: {} and ChannelUID: {} ", command.toFullString(),
                 channelUID.getIdWithoutGroup());
 
-        Device blind = this.blind;
-        Client client = this.client;
+        withBridgeHandler(handler -> {
+            Device blind = this.blind;
+            Client client = handler.getClient();
 
-        if (client == null || blind == null) {
-            return;
-        }
-
-        try {
-            receivedCommandAt = Instant.now();
-            switch (channelUID.getIdWithoutGroup()) {
-                case CHANNEL_CONTROL:
-                    if (command instanceof PercentType) {
-                        PercentType percent = ((PercentType) command);
-                        client.moveTo(blind, percent);
-                        break;
-                    }
-
-                    if (command instanceof RefreshType) {
-                        DeviceStatusResponse response = client.status(blind);
-                        updateState(CHANNEL_CONTROL,
-                                QuantityType.valueOf(response.data.currentPosition, Units.PERCENT));
-                        break;
-                    }
-
-                    if (command instanceof Number) {
-                        client.moveTo(blind, (Number) command);
-                        break;
-                    }
-
-                    if (command instanceof StopMoveType) {
-                        StopMoveType stopMove = (StopMoveType) command;
-                        if (StopMoveType.STOP.equals(stopMove)) {
-                            client.stop(blind);
-                            break;
-                        }
-
-                        logger.debug("Received unknown StopMove command MOVE");
-                        break;
-                    }
-
-                    if (command instanceof UpDownType) {
-                        UpDownType upDown = (UpDownType) command;
-                        if (UpDownType.UP.equals(upDown)) {
-                            client.up(blind);
-                            break;
-                        }
-
-                        client.down(blind);
-                        break;
-                    }
-
-                    logger.debug("Received unknown command {}", command.toFullString());
-                    break;
-                default:
-                    break;
+            if (client == null || blind == null) {
+                return;
             }
-        } catch (Exception e) {
-            logger.debug("Failed to execute command {}: {}", command.toFullString(), e.getMessage());
-        }
+
+            try {
+                receivedCommandAt = Instant.now();
+                switch (channelUID.getIdWithoutGroup()) {
+                    case CHANNEL_CONTROL:
+                        if (command instanceof PercentType) {
+                            PercentType percent = ((PercentType) command);
+                            client.moveTo(blind, percent);
+                            break;
+                        }
+
+                        if (command instanceof RefreshType) {
+                            DeviceStatusResponse response = client.status(blind);
+                            updateState(CHANNEL_CONTROL,
+                                    QuantityType.valueOf(response.data.currentPosition, Units.PERCENT));
+                            break;
+                        }
+
+                        if (command instanceof Number) {
+                            client.moveTo(blind, (Number) command);
+                            break;
+                        }
+
+                        if (command instanceof StopMoveType) {
+                            StopMoveType stopMove = (StopMoveType) command;
+                            if (StopMoveType.STOP.equals(stopMove)) {
+                                client.stop(blind);
+                                break;
+                            }
+
+                            logger.debug("Received unknown StopMove command MOVE");
+                            break;
+                        }
+
+                        if (command instanceof UpDownType) {
+                            UpDownType upDown = (UpDownType) command;
+                            if (UpDownType.UP.equals(upDown)) {
+                                client.up(blind);
+                                break;
+                            }
+
+                            client.down(blind);
+                            break;
+                        }
+
+                        logger.debug("Received unknown command {}", command.toFullString());
+                        break;
+                    default:
+                        break;
+                }
+            } catch (Exception e) {
+                logger.debug("Failed to execute command {}: {}", command.toFullString(), e.getMessage());
+            }
+        });
     }
 
     @Nullable
     private ScheduledFuture<?> stateUpdateJob;
 
-    ;
-
     private void synchronizeState() {
-        if (bridgeConfiguration != null && bridgeConfiguration.pushUpdates) {
-            subscribeToStateUpdates();
+        withBridgeConfiguration(config -> {
+            if (config.pushUpdates) {
+                subscribeToStateUpdates();
+                return;
+            }
+
+            stateUpdateJob = scheduler.scheduleWithFixedDelay(this::updateState, 10, UPDATE_STATE_INTERVAL_SECONDS,
+                    TimeUnit.SECONDS);
+        });
+    }
+
+    private void withBridgeHandler(Consumer<BridgeHandler> consumer) {
+        Bridge bridge = getBridge();
+
+        if (bridge == null) {
             return;
         }
 
-        stateUpdateJob = scheduler.scheduleWithFixedDelay(this::updateState, 10, UPDATE_STATE_INTERVAL_SECONDS,
-                TimeUnit.SECONDS);
+        BridgeHandler handler = (BridgeHandler) bridge.getHandler();
+
+        if (handler == null) {
+            return;
+        }
+        consumer.accept(handler);
+    }
+
+    private void withBridgeConfiguration(Consumer<BridgeConfiguration> consumer) {
+        withBridgeHandler((handler) -> {
+            BridgeConfiguration config = handler.config;
+            if (config != null) {
+                consumer.accept(config);
+            }
+        });
     }
 
     @Nullable
     private Runnable unsubscribeFromStateUpdates;
 
     private void subscribeToStateUpdates() {
-        Device blind = this.blind;
-        BridgeHandler handler = this.bridgeHandler;
+        withBridgeHandler(handler -> {
+            Device blind = this.blind;
 
-        if (blind == null || handler == null) {
-            return;
-        }
+            if (blind == null) {
+                return;
+            }
 
-        BlindStatusSubscriber subscriber = new BlindStatusSubscriber(blind.macAddress, (status) -> {
-            logger.debug("Updating blind {} position to {}", blind.macAddress, status.currentPosition);
-            updateState(CHANNEL_CONTROL, QuantityType.valueOf(status.currentPosition, Units.PERCENT));
+            BlindStatusSubscriber subscriber = new BlindStatusSubscriber(blind.macAddress, (status) -> {
+                logger.debug("Updating blind {} position to {}", blind.macAddress, status.currentPosition);
+                updateState(CHANNEL_CONTROL, QuantityType.valueOf(status.currentPosition, Units.PERCENT));
+            });
+            unsubscribeFromStateUpdates = handler.subscribeToStateChanges(subscriber);
         });
-        unsubscribeFromStateUpdates = handler.subscribeToStateChanges(subscriber);
     }
 
     private void updateState() {
         synchronized (BlindHandler.class) {
-            try {
-                Client client = this.client;
-                Device blind = this.blind;
-                Instant receivedCommandAt = this.receivedCommandAt;
+            withBridgeHandler(handler -> {
+                try {
+                    Client client = handler.getClient();
+                    Device blind = this.blind;
+                    Instant receivedCommandAt = this.receivedCommandAt;
 
-                if (client == null || blind == null) {
-                    return;
+                    if (client == null || blind == null) {
+                        return;
+                    }
+
+                    if (receivedCommandAt != null
+                            && Duration.between(receivedCommandAt, Instant.now()).toSeconds() < 30) {
+                        return;
+                    }
+
+                    DeviceStatusResponse response = client.status(blind);
+                    updateState(CHANNEL_CONTROL, QuantityType.valueOf(response.data.currentPosition, Units.PERCENT));
+
+                } catch (Exception e) {
+                    logger.trace("Failed to synchronize state {}", e.getMessage());
                 }
-
-                if (receivedCommandAt != null && Duration.between(receivedCommandAt, Instant.now()).toSeconds() < 30) {
-                    return;
-                }
-
-                DeviceStatusResponse response = client.status(blind);
-                updateState(CHANNEL_CONTROL, QuantityType.valueOf(response.data.currentPosition, Units.PERCENT));
-            } catch (Exception e) {
-                logger.trace("Failed to synchronize state {}", e.getMessage());
-            }
+            });
         }
     }
 

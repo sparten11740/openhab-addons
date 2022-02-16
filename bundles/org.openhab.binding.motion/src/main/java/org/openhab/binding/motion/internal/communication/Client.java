@@ -59,9 +59,10 @@ public class Client {
     private final Logger logger = LoggerFactory.getLogger(Client.class);
 
     public Client(String hostname, Encryptor encryptor) throws SocketException, UnknownHostException {
+        logger.debug("Initializing client with hostname {}", hostname);
         socket = new DatagramSocket(null);
         socket.setReuseAddress(true);
-        socket.setSoTimeout(5000);
+        socket.setSoTimeout(15000);
 
         SocketAddress socketAddress = new InetSocketAddress(PORT_RECEIVE);
         socket.bind(socketAddress);

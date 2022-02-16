@@ -16,6 +16,7 @@ import static org.openhab.binding.motion.internal.MotionBindingConstants.MULTICA
 import static org.openhab.binding.motion.internal.MotionBindingConstants.PORT_RECEIVE;
 
 import java.io.IOException;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -98,8 +99,14 @@ public class BridgeHandler extends BaseBridgeHandler {
                 client.getDevices();
                 updateStatus(ThingStatus.ONLINE);
                 synchronizeStates();
+            } catch (UnknownHostException e) {
+                logger.error("Failed to initialize bridge, host unknown: {}", e.getMessage());
+                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR);
+            } catch (SocketException e) {
+                logger.error("Failed to initialize bridge: {}", e.getMessage());
+                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR);
             } catch (IOException e) {
-                logger.error("Failed to initialize motion client: {}", e.getMessage());
+                logger.error("Failed to communicate through bridge: {}", e.getMessage());
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR);
             }
         });
@@ -144,6 +151,7 @@ public class BridgeHandler extends BaseBridgeHandler {
     @Override
     public void dispose() {
         if (client != null) {
+            logger.debug("Disposing motion client");
             client.dispose();
         }
 
