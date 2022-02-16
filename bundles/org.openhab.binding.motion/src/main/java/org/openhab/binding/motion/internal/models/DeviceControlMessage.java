@@ -10,9 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.openhab.binding.motion.internal.dto;
-
-import java.time.Instant;
+package org.openhab.binding.motion.internal.models;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 
@@ -26,14 +24,12 @@ import com.google.gson.annotations.SerializedName;
  */
 
 @NonNullByDefault
-public class DeviceControlMessage {
+public class DeviceControlMessage extends Message {
 
     public DeviceControlMessage(Device device) {
+        super(MessageType.UPDATE_DEVICE);
         deviceType = device.type;
         macAddress = device.macAddress;
-
-        Instant instant = Instant.now();
-        this.id = "" + instant.getEpochSecond() + instant.getNano();
     }
 
     @SerializedName("mac")
@@ -46,10 +42,4 @@ public class DeviceControlMessage {
 
     @SerializedName("data")
     public Command command = Command.fromType(CommandType.STATUS);
-
-    @SerializedName("msgID")
-    public String id;
-
-    @SerializedName("msgType")
-    public MessageType type = MessageType.UPDATE_DEVICE;
 }

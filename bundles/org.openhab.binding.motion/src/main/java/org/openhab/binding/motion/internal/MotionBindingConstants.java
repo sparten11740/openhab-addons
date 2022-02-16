@@ -26,8 +26,8 @@ public class MotionBindingConstants {
 
     public static final String BINDING_ID = "motion";
 
-    public static final ThingTypeUID THING_TYPE_BRIDGE = new ThingTypeUID(BINDING_ID, "motionbridge");
-    public static final ThingTypeUID THING_TYPE_BLIND = new ThingTypeUID(BINDING_ID, "motionblind");
+    public static final ThingTypeUID THING_TYPE_BRIDGE = new ThingTypeUID(BINDING_ID, "bridge");
+    public static final ThingTypeUID THING_TYPE_BLIND = new ThingTypeUID(BINDING_ID, "blind");
 
     public static final String CHANNEL_CONTROL = "control";
 
@@ -35,5 +35,6 @@ public class MotionBindingConstants {
 
     public static final int PORT_SEND = 32100;
     public static final int PORT_RECEIVE = 32101;
+
     public static final String MULTICAST_ADDRESS = "238.0.0.18";
 }

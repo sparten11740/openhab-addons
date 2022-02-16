@@ -10,18 +10,26 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.openhab.binding.motion.internal.things.bridge;
+package org.openhab.binding.motion.internal.models;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 
 /**
- * The {@link BridgeConfiguration} class contains fields mapping thing configuration parameters.
+ * The {@link CommandType} enum.
  *
  * @author Jan Wendland - Initial contribution
  */
+
 @NonNullByDefault
-public class BridgeConfiguration {
-    public String hostname = "";
-    public String secret = "";
-    public Boolean pushUpdates = false;
+public enum CommandType {
+    DOWN(0),
+    UP(1),
+    STOP(2),
+    STATUS(5);
+
+    public final int value;
+
+    CommandType(int value) {
+        this.value = value;
+    }
 }

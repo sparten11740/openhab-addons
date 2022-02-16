@@ -4,7 +4,7 @@
 	xmlns:thing="https://openhab.org/schemas/thing-description/v1.0.0"
 	xsi:schemaLocation="https://openhab.org/schemas/thing-description/v1.0.0 https://openhab.org/schemas/thing-description-1.0.0.xsd">
 
-	<bridge-type id="motionbridge">
+	<bridge-type id="bridge">
 		<label>Motion bridge</label>
 		<description>Hub that controlls your motion devices</description>
 
@@ -25,12 +25,27 @@
 					the about page 5 times.
 				</description>
 			</parameter>
+			<parameter name="pushUpdates" type="boolean">
+				<context>item</context>
+				<default>false</default>
+				<label>Use push-based item state synchronization</label>
+				<description>
+					To keep the state of Motion devices controlled outside openHAB - for instance through the
+					Motion app -
+					in sync, the device status can either be retrieved through subscription of
+					the UDP multicast group used by the
+					Motion hub (push) or by requesting the status
+					periodically. This configuration parameter exists because
+					multicasts
+					are not guaranteed to work in every network.
+				</description>
+			</parameter>
 		</config-description>
 	</bridge-type>
 
-	<thing-type id="motionblind">
+	<thing-type id="blind">
 		<supported-bridge-type-refs>
-			<bridge-type-ref id="motionbridge"/>
+			<bridge-type-ref id="bridge"/>
 		</supported-bridge-type-refs>
 
 		<label>Motion Blind</label>

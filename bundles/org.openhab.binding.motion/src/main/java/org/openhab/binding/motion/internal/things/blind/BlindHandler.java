@@ -24,8 +24,9 @@ import java.util.concurrent.TimeUnit;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.binding.motion.internal.communication.Client;
-import org.openhab.binding.motion.internal.dto.Device;
-import org.openhab.binding.motion.internal.dto.DeviceControlResponse;
+import org.openhab.binding.motion.internal.models.Device;
+import org.openhab.binding.motion.internal.models.DeviceStatusResponse;
+import org.openhab.binding.motion.internal.things.bridge.BridgeConfiguration;
 import org.openhab.binding.motion.internal.things.bridge.BridgeHandler;
 import org.openhab.core.library.types.PercentType;
 import org.openhab.core.library.types.QuantityType;
@@ -60,6 +61,12 @@ public class BlindHandler extends BaseThingHandler {
     @Nullable
     private Device blind;
 
+    @Nullable
+    private BridgeConfiguration bridgeConfiguration;
+
+    @Nullable
+    private BridgeHandler bridgeHandler;
+
     public BlindHandler(Thing thing) {
         super(thing);
     }
@@ -74,10 +81,13 @@ public class BlindHandler extends BaseThingHandler {
         }
 
         BridgeHandler handler = (BridgeHandler) bridge.getHandler();
+        this.bridgeHandler = handler;
 
         if (handler == null) {
             return;
         }
+
+        bridgeConfiguration = handler.config;
 
         client = handler.getClient();
 
@@ -97,7 +107,7 @@ public class BlindHandler extends BaseThingHandler {
                 blind = device.get();
 
                 updateStatus(ThingStatus.ONLINE);
-                scheduleStateUpdate();
+                synchronizeState();
             } catch (IOException e) {
                 logger.error("Failed to communicate with blind: {}", e.getMessage());
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR);
@@ -130,7 +140,7 @@ public class BlindHandler extends BaseThingHandler {
                     }
 
                     if (command instanceof RefreshType) {
-                        DeviceControlResponse response = client.status(blind);
+                        DeviceStatusResponse response = client.status(blind);
                         updateState(CHANNEL_CONTROL,
                                 QuantityType.valueOf(response.data.currentPosition, Units.PERCENT));
                         break;
@@ -150,7 +160,6 @@ public class BlindHandler extends BaseThingHandler {
 
                         logger.debug("Received unknown StopMove command MOVE");
                         break;
-
                     }
 
                     if (command instanceof UpDownType) {
@@ -177,13 +186,37 @@ public class BlindHandler extends BaseThingHandler {
     @Nullable
     private ScheduledFuture<?> stateUpdateJob;
 
-    private void scheduleStateUpdate() {
+    ;
+
+    private void synchronizeState() {
+        if (bridgeConfiguration != null && bridgeConfiguration.pushUpdates) {
+            subscribeToStateUpdates();
+            return;
+        }
+
         stateUpdateJob = scheduler.scheduleWithFixedDelay(this::updateState, 10, UPDATE_STATE_INTERVAL_SECONDS,
                 TimeUnit.SECONDS);
     }
 
+    @Nullable
+    private Runnable unsubscribeFromStateUpdates;
+
+    private void subscribeToStateUpdates() {
+        Device blind = this.blind;
+        BridgeHandler handler = this.bridgeHandler;
+
+        if (blind == null || handler == null) {
+            return;
+        }
+
+        BlindStatusSubscriber subscriber = new BlindStatusSubscriber(blind.macAddress, (status) -> {
+            logger.debug("Updating blind {} position to {}", blind.macAddress, status.currentPosition);
+            updateState(CHANNEL_CONTROL, QuantityType.valueOf(status.currentPosition, Units.PERCENT));
+        });
+        unsubscribeFromStateUpdates = handler.subscribeToStateChanges(subscriber);
+    }
+
     private void updateState() {
-        // TODO: Subscribe to UDP multicast from hub and update states push based
         synchronized (BlindHandler.class) {
             try {
                 Client client = this.client;
@@ -198,7 +231,7 @@ public class BlindHandler extends BaseThingHandler {
                     return;
                 }
 
-                DeviceControlResponse response = client.status(blind);
+                DeviceStatusResponse response = client.status(blind);
                 updateState(CHANNEL_CONTROL, QuantityType.valueOf(response.data.currentPosition, Units.PERCENT));
             } catch (Exception e) {
                 logger.trace("Failed to synchronize state {}", e.getMessage());
@@ -210,6 +243,10 @@ public class BlindHandler extends BaseThingHandler {
     public void dispose() {
         if (stateUpdateJob != null) {
             stateUpdateJob.cancel(true);
+        }
+
+        if (unsubscribeFromStateUpdates != null) {
+            unsubscribeFromStateUpdates.run();
         }
 
         super.dispose();

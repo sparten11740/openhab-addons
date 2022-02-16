@@ -10,26 +10,20 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.openhab.binding.motion.internal.dto;
+package org.openhab.binding.motion.internal.things;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.openhab.binding.motion.internal.models.DeviceStatus;
+import org.openhab.binding.motion.internal.models.DeviceStatusResponse;
 
 /**
- * The {@link CommandType} enum.
+ * The {@link StatusSubscriber}
  *
  * @author Jan Wendland - Initial contribution
  */
-
 @NonNullByDefault
-public enum CommandType {
-    DOWN(0),
-    UP(1),
-    STOP(2),
-    STATUS(5);
+public interface StatusSubscriber {
+    boolean accepts(DeviceStatusResponse response);
 
-    public final int value;
-
-    CommandType(int value) {
-        this.value = value;
-    }
+    void consume(DeviceStatus deviceStatus);
 }

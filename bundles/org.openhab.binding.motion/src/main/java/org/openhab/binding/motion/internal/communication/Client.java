@@ -28,15 +28,15 @@ import java.util.List;
 import java.util.Optional;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
-import org.openhab.binding.motion.internal.dto.Command;
-import org.openhab.binding.motion.internal.dto.CommandType;
-import org.openhab.binding.motion.internal.dto.Device;
-import org.openhab.binding.motion.internal.dto.DeviceControlMessage;
-import org.openhab.binding.motion.internal.dto.DeviceControlResponse;
-import org.openhab.binding.motion.internal.dto.ListDevicesResponse;
-import org.openhab.binding.motion.internal.dto.Message;
-import org.openhab.binding.motion.internal.dto.MessageType;
 import org.openhab.binding.motion.internal.exceptions.EncryptionFailed;
+import org.openhab.binding.motion.internal.models.Command;
+import org.openhab.binding.motion.internal.models.CommandType;
+import org.openhab.binding.motion.internal.models.Device;
+import org.openhab.binding.motion.internal.models.DeviceControlMessage;
+import org.openhab.binding.motion.internal.models.DeviceStatusResponse;
+import org.openhab.binding.motion.internal.models.ListDevicesResponse;
+import org.openhab.binding.motion.internal.models.Message;
+import org.openhab.binding.motion.internal.models.MessageType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,7 +48,6 @@ import com.google.gson.GsonBuilder;
  *
  * @author Jan Wendland - Initial contribution
  */
-
 @NonNullByDefault
 public class Client {
     private final DatagramSocket socket;
@@ -83,36 +82,36 @@ public class Client {
         return devices.stream().filter(device -> device.macAddress.equals(macAddress)).findFirst();
     }
 
-    public DeviceControlResponse up(Device device) throws IOException, EncryptionFailed {
+    public DeviceStatusResponse up(Device device) throws IOException, EncryptionFailed {
         return sendCommand(device, Command.fromType(CommandType.UP));
     }
 
-    public DeviceControlResponse down(Device device) throws IOException, EncryptionFailed {
+    public DeviceStatusResponse down(Device device) throws IOException, EncryptionFailed {
         return sendCommand(device, Command.fromType(CommandType.DOWN));
     }
 
-    public DeviceControlResponse status(Device device) throws IOException, EncryptionFailed {
+    public DeviceStatusResponse status(Device device) throws IOException, EncryptionFailed {
         synchronized (this) {
             return sendCommand(device, Command.fromType(CommandType.STATUS));
         }
     }
 
-    public DeviceControlResponse stop(Device device) throws IOException, EncryptionFailed {
+    public DeviceStatusResponse stop(Device device) throws IOException, EncryptionFailed {
         return sendCommand(device, Command.fromType(CommandType.STOP));
     }
 
-    public DeviceControlResponse moveTo(Device device, Number targetPosition) throws IOException, EncryptionFailed {
+    public DeviceStatusResponse moveTo(Device device, Number targetPosition) throws IOException, EncryptionFailed {
         return sendCommand(device, Command.fromTargetPosition(targetPosition));
     }
 
-    private DeviceControlResponse sendCommand(Device device, Command command) throws IOException, EncryptionFailed {
+    private DeviceStatusResponse sendCommand(Device device, Command command) throws IOException, EncryptionFailed {
         DeviceControlMessage message = new DeviceControlMessage(device);
 
         message.command = command;
         message.token = getAccessToken();
         logger.debug("Sending message {}", gson.toJson(message));
 
-        DeviceControlResponse response = request(message, DeviceControlResponse.class);
+        DeviceStatusResponse response = request(message, DeviceStatusResponse.class);
 
         logger.debug("Received response {}", gson.toJson(response));
         return response;

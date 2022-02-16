@@ -10,24 +10,25 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.openhab.binding.motion.internal.dto;
+package org.openhab.binding.motion.internal.models;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 
 import com.google.gson.annotations.SerializedName;
 
 /**
- * The {@link MessageType}
+ * The {@link DeviceStatusResponse} describes the response to a LIST_DEVICES message
  *
  * @author Jan Wendland - Initial contribution
  */
 
 @NonNullByDefault
-public enum MessageType {
-    @SerializedName("GetDeviceList")
-    LIST_DEVICES,
-    @SerializedName("WriteDevice")
-    UPDATE_DEVICE,
-    @SerializedName("WriteDeviceAck")
-    UPDATE_DEVICE_ACKNOWLEDGED
+public class DeviceStatusResponse {
+    public DeviceStatus data = new DeviceStatus();
+
+    @SerializedName("msgType")
+    public MessageType messageType = MessageType.UPDATE_DEVICE_ACKNOWLEDGED;
+
+    @SerializedName("mac")
+    public String macAddress = "";
 }

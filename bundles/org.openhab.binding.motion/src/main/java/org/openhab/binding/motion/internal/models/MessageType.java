@@ -10,21 +10,24 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.openhab.binding.motion.internal.dto;
-
-import java.util.ArrayList;
-import java.util.List;
+package org.openhab.binding.motion.internal.models;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 
+import com.google.gson.annotations.SerializedName;
+
 /**
- * The {@link ListDevicesResponse} describes the response to a LIST_DEVICES message
+ * The {@link MessageType}
  *
  * @author Jan Wendland - Initial contribution
  */
 
 @NonNullByDefault
-public class ListDevicesResponse {
-    public List<Device> data = new ArrayList<>();
-    public String token = "";
+public enum MessageType {
+    @SerializedName("GetDeviceList")
+    LIST_DEVICES,
+    @SerializedName("WriteDevice")
+    UPDATE_DEVICE,
+    @SerializedName("WriteDeviceAck")
+    UPDATE_DEVICE_ACKNOWLEDGED
 }

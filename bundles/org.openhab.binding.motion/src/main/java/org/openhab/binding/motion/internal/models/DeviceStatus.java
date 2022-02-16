@@ -10,34 +10,28 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.openhab.binding.motion.internal.dto;
-
-import java.time.Instant;
+package org.openhab.binding.motion.internal.models;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 
 import com.google.gson.annotations.SerializedName;
 
 /**
- * The {@link Message} describes the most basic form of message that the Motion hub
- * consumes.
+ * The {@link DeviceStatus} model representing the status of a device.
  *
  * @author Jan Wendland - Initial contribution
  */
 
 @NonNullByDefault
-public class Message {
-
-    public Message(MessageType type) {
-        this.type = type;
-
-        Instant instant = Instant.now();
-        this.id = "" + instant.getEpochSecond() + instant.getNano();
-    }
-
-    @SerializedName("msgID")
-    public String id;
-
-    @SerializedName("msgType")
-    public MessageType type;
+public class DeviceStatus {
+    public int type = -1;
+    public int operation = -1;
+    public int currentPosition = -1;
+    public int currentAngle = -1;
+    public int currentState = -1;
+    public int voltageMode = -1;
+    public int batteryLevel = -1;
+    public int wirelessMode = -1;
+    @SerializedName("RSSI")
+    public int rssi = -1;
 }
